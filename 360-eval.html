@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다면평가(360°) · Multi-Rater Evaluation</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --dw-orange:#E87722;--dw-orange2:#F5A623;--accent-dk:#C45E0A;
+  --navy:#2c3140;--bg:#FDF8F3;--surface:#FFFFFF;--surface2:#FFF4EA;
+  --surface3:#FDEBD8;--border:#F0D9C4;--border2:#E0BB98;
+  --text:#2B1A0A;--text2:#5C4030;--text3:#A08060;--text4:#C8AA90;
+  --green:#2d6a4f;--red:#D94020;--blue:#1a4f6b;
+  --shadow:0 2px 12px rgba(232,119,34,0.08);--shadow-lg:0 8px 40px rgba(232,119,34,0.16);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+.d-none{display:none!important;}
+
+/* ── SPLASH ── */
+#splash{background:linear-gradient(135deg,#FFF4E8 0%,#FDEBD0 50%,#FDF8F3 100%);align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.splash-grid{position:absolute;inset:0;background-image:radial-gradient(circle,rgba(232,119,34,0.08) 1px,transparent 1px);background-size:40px 40px;}
+.splash-deco{position:absolute;font-family:'Bebas Neue',sans-serif;color:rgba(232,119,34,0.06);font-size:280px;line-height:1;right:-30px;bottom:-40px;user-select:none;letter-spacing:-10px;}
+#splash::before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:linear-gradient(180deg,var(--dw-orange),var(--dw-orange2));}
+.splash-inner{position:relative;z-index:1;text-align:center;padding:0 24px;max-width:700px;}
+.splash-tag{display:inline-block;padding:6px 18px;border:1.5px solid rgba(232,119,34,0.35);font-size:11px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:24px;animation:fadeUp .6s ease both;}
+.splash-h{font-size:clamp(38px,5vw,72px);font-weight:900;line-height:1.1;color:var(--text);margin-bottom:6px;letter-spacing:-2px;animation:fadeUp .6s ease .1s both;}
+.splash-h span{color:var(--dw-orange);}
+.splash-sub{font-size:14px;color:var(--text3);margin-bottom:16px;animation:fadeUp .6s ease .15s both;}
+.splash-desc{font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:36px;background:rgba(232,119,34,0.06);border-left:3px solid var(--dw-orange);padding:14px 18px;text-align:left;animation:fadeUp .6s ease .2s both;}
+.splash-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:fadeUp .6s ease .25s both;}
+.splash-btn{display:inline-flex;flex-direction:column;align-items:center;gap:4px;padding:18px 32px;border:2px solid transparent;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border-radius:3px;transition:all .2s;min-width:160px;}
+.splash-btn-primary{background:var(--dw-orange);color:#fff;box-shadow:0 4px 20px rgba(232,119,34,0.35);}
+.splash-btn-primary:hover{background:var(--accent-dk);transform:translateY(-2px);}
+.splash-btn-secondary{background:var(--surface);color:var(--navy);border-color:var(--border2);}
+.splash-btn-secondary:hover{border-color:var(--dw-orange);color:var(--dw-orange);}
+.splash-btn small{font-size:10px;font-weight:400;opacity:.75;letter-spacing:.5px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── ROLE SELECT ── */
+.role-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:28px;font-family:inherit;}
+.role-back:hover{color:var(--dw-orange);}
+.role-cards{display:grid;gap:14px;}
+.role-card{background:var(--surface);border:2px solid var(--border);padding:22px 24px;cursor:pointer;transition:all .2s;border-radius:3px;display:flex;align-items:center;gap:18px;}
+.role-card:hover{border-color:var(--dw-orange);box-shadow:var(--shadow);}
+.role-card-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.role-card.self .role-card-icon{background:rgba(232,119,34,0.12);}
+.role-card.manager .role-card-icon{background:rgba(26,79,107,0.12);}
+.role-card.peer .role-card-icon{background:rgba(45,106,79,0.12);}
+.role-card-name{font-size:16px;font-weight:800;margin-bottom:3px;}
+.role-card-desc{font-size:12px;color:var(--text3);line-height:1.6;}
+.role-card.self .role-card-name{color:var(--dw-orange);}
+.role-card.manager .role-card-name{color:var(--blue);}
+.role-card.peer .role-card-name{color:var(--green);}
+
+/* ── LOGIN ── */
+.login-card{background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--dw-orange);padding:38px 36px;box-shadow:var(--shadow-lg);border-radius:3px;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+.login-logo-icon{width:36px;height:36px;background:var(--dw-orange);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
+.login-logo-txt{font-size:13px;font-weight:800;color:var(--dw-orange);letter-spacing:.5px;}
+.login-h{font-size:20px;font-weight:900;margin-bottom:4px;}
+.login-desc{font-size:12px;color:var(--text3);margin-bottom:24px;line-height:1.7;}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:all .2s;border-radius:3px;}
+.form-input:focus{border-color:var(--dw-orange);background:var(--surface);}
+.form-input::placeholder{color:var(--text4);}
+.login-submit{width:100%;padding:14px;background:var(--dw-orange);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;border-radius:3px;}
+.login-submit:hover{background:var(--accent-dk);}
+.login-err{color:var(--red);font-size:12px;margin-top:12px;text-align:center;display:none;}
+
+/* ── APP LAYOUT ── */
+.app-layout{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:272px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-top{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.sidebar-logo{font-size:12px;font-weight:800;letter-spacing:.5px;color:rgba(255,255,255,0.8);}
+.sidebar-role-badge{display:inline-block;margin-top:5px;padding:3px 10px;font-size:10px;font-weight:700;border-radius:50px;}
+.badge-self{background:rgba(232,119,34,0.25);color:#ffb570;}
+.badge-manager{background:rgba(26,79,107,0.4);color:#90ccee;}
+.badge-peer{background:rgba(45,106,79,0.35);color:#7effc8;}
+.user-block{padding:13px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:10px;}
+.user-av{width:36px;height:36px;background:var(--dw-orange);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;border-radius:50%;}
+.user-name{font-size:13px;font-weight:700;color:#fff;}
+.user-dept{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;}
+.sb-section-hd{padding:10px 14px 4px;font-size:9px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;}
+.cand-list{flex:1;overflow-y:auto;padding:6px 8px;}
+.cand-item{padding:10px 12px;cursor:pointer;margin-bottom:3px;border:1px solid transparent;border-radius:3px;transition:all .15s;}
+.cand-item:hover{background:rgba(255,255,255,0.07);}
+.cand-item.active{background:rgba(232,119,34,0.18);border-color:rgba(232,119,34,0.35);}
+.cand-item-name{font-size:13px;font-weight:700;color:#fff;}
+.cand-item-dept{font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px;}
+.cand-item-badges{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;}
+.bdg{padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;}
+.bdg-done{background:rgba(45,106,79,0.3);color:#7effc8;}
+.bdg-draft{background:rgba(232,119,34,0.2);color:#ffd0a0;}
+.bdg-todo{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);}
+.search-wrap{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.sidebar-search{width:100%;padding:8px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:13px;outline:none;font-family:inherit;border-radius:3px;}
+.sidebar-search::placeholder{color:rgba(255,255,255,0.3);}
+.sidebar-foot{padding:10px 12px;border-top:1px solid rgba(255,255,255,0.07);}
+.foot-btn{width:100%;padding:9px;background:rgba(255,255,255,0.07);border:none;color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;border-radius:3px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.foot-btn:hover{background:rgba(255,255,255,0.13);color:#fff;}
+.foot-btn.red{background:rgba(200,65,10,0.12);color:rgba(255,140,110,0.9);}
+
+/* ── MAIN ── */
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.main-header{padding:16px 26px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-top:3px solid var(--dw-orange);}
+.main-title{font-size:18px;font-weight:800;}
+.main-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.main-body{flex:1;overflow-y:auto;padding:22px 26px;}
+.autosave-ind{font-size:11px;color:var(--text4);display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.autosave-dot{width:6px;height:6px;border-radius:50%;background:var(--text4);transition:background .3s;}
+.autosave-dot.saved{background:var(--green);}
+
+/* ── EVAL FORM ── */
+.notice-box{background:rgba(232,119,34,0.06);border:1px solid rgba(232,119,34,0.2);border-left:4px solid var(--dw-orange);padding:13px 17px;margin-bottom:18px;font-size:12px;color:var(--text2);line-height:1.9;border-radius:3px;}
+.cand-card{background:linear-gradient(135deg,var(--dw-orange),var(--dw-orange2));color:#fff;padding:18px 22px;margin-bottom:18px;border-radius:3px;position:relative;overflow:hidden;}
+.cand-card::before{content:'360°';font-family:'Bebas Neue',sans-serif;font-size:90px;position:absolute;right:-8px;bottom:-14px;color:rgba(255,255,255,0.08);line-height:1;pointer-events:none;}
+.cand-card-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.7;margin-bottom:5px;}
+.cand-card-name{font-size:22px;font-weight:800;}
+.cand-card-meta{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.cand-meta-chip{background:rgba(255,255,255,0.18);padding:3px 12px;font-size:11px;border-radius:50px;}
+.section-hd{display:flex;align-items:center;gap:10px;margin:18px 0 12px;}
+.section-tag{font-size:10px;font-weight:800;letter-spacing:2px;padding:4px 10px;background:var(--dw-orange);color:#fff;text-transform:uppercase;border-radius:2px;flex-shrink:0;}
+.section-line{flex:1;height:1px;background:var(--border);}
+.q-cards{display:grid;gap:11px;margin-bottom:18px;}
+.q-card{background:var(--surface);border:1px solid var(--border);padding:18px 20px;border-radius:3px;transition:border-color .2s;}
+.q-card:hover{border-color:var(--border2);}
+.q-num{font-size:10px;font-weight:800;letter-spacing:2px;color:var(--dw-orange);margin-bottom:6px;}
+.q-cat{display:inline-block;padding:2px 8px;background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700;border-radius:2px;margin-bottom:8px;}
+.q-text-ko{font-size:14px;font-weight:700;color:var(--text);line-height:1.65;margin-bottom:3px;}
+.q-text-en{font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:14px;font-style:italic;}
+.scale-row{display:flex;gap:5px;flex-wrap:wrap;}
+.scale-btn{flex:1;min-width:74px;padding:9px 5px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11px;font-weight:600;color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .15s;border-radius:3px;font-family:inherit;text-align:center;line-height:1.3;}
+.scale-btn:hover{border-color:var(--dw-orange);color:var(--dw-orange);}
+.scale-btn.selected-pos{background:#2d6a4f;border-color:#2d6a4f;color:#fff;}
+.scale-btn.selected-neg{background:#D94020;border-color:#D94020;color:#fff;}
+.scale-btn.selected-neutral{background:#7a6050;border-color:#7a6050;color:#fff;}
+.scale-btn.selected-unknown{background:#1a4f6b;border-color:#1a4f6b;color:#fff;}
+.scale-btn .en{font-size:9px;opacity:.8;}
+.q-sel-label{font-size:11px;color:var(--text3);margin-top:7px;text-align:right;min-height:15px;}
+.text-cards{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:18px;}
+.text-card{background:var(--surface);border:1px solid var(--border);padding:16px 18px;border-radius:3px;}
+.text-card-label{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.lbl-strength{color:var(--green);}
+.lbl-improve{color:var(--dw-orange);}
+.eval-textarea{width:100%;min-height:96px;padding:11px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;resize:vertical;outline:none;font-family:inherit;line-height:1.6;transition:border .2s;border-radius:3px;}
+.eval-textarea:focus{border-color:var(--dw-orange);background:var(--surface);}
+.eval-textarea::placeholder{color:var(--text4);}
+.pos-banner{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--dw-orange);padding:14px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;text-align:center;border-radius:3px;}
+.pos-item .pv{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;}
+.pos-item .pl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.pos-item .pl small{display:block;font-size:9px;color:var(--text4);}
+.pos-div{border-left:1px solid var(--border);}
+.pv-green{color:var(--green);}
+.pv-red{color:var(--red);}
+.pv-gray{color:var(--text3);}
+.action-box{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--dw-orange);padding:16px 20px;border-radius:3px;margin-bottom:8px;}
+.action-box-title{font-size:13px;font-weight:800;margin-bottom:4px;}
+.action-box-desc{font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:12px;}
+.action-btns{display:flex;gap:10px;}
+.btn-draft{flex:1;padding:12px;border:2px solid var(--dw-orange);background:var(--surface);color:var(--dw-orange);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-radius:3px;transition:all .2s;}
+.btn-draft:hover{background:rgba(232,119,34,0.06);}
+.btn-final{flex:2;padding:12px;background:var(--green);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-radius:3px;transition:all .2s;}
+.btn-final:hover{background:#1f5038;}
+.submitted-box{background:#e8f5ef;border:2px solid #b8dfc8;padding:16px 20px;text-align:center;border-radius:3px;margin-bottom:8px;}
+.self-done-notice{background:rgba(232,119,34,0.08);border:1px solid rgba(232,119,34,0.25);border-left:4px solid var(--dw-orange);padding:14px 18px;margin-bottom:18px;border-radius:3px;}
+
+/* ── VIEWER ── */
+.viewer-tabs{display:flex;gap:2px;padding:0 26px;background:var(--surface);border-bottom:2px solid var(--border);flex-shrink:0;}
+.vtab{padding:13px 18px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:13px;font-weight:700;color:var(--text3);font-family:inherit;transition:all .2s;margin-bottom:-2px;}
+.vtab.active{color:var(--dw-orange);border-bottom-color:var(--dw-orange);}
+
+/* VIEWER 대상자 목록 */
+.viewer-cand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:8px;}
+.viewer-cand-card{background:var(--surface);border:1.5px solid var(--border);padding:16px 18px;cursor:pointer;border-radius:3px;transition:all .2s;}
+.viewer-cand-card:hover{border-color:var(--dw-orange);box-shadow:var(--shadow);}
+.vc-name{font-size:15px;font-weight:800;margin-bottom:3px;}
+.vc-dept{font-size:12px;color:var(--text3);}
+.vc-count{margin-top:10px;font-size:11px;color:var(--text4);}
+
+/* VIEWER 리포트 */
+.report-wrap{max-width:900px;}
+.report-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:20px;font-family:inherit;}
+.report-back:hover{color:var(--dw-orange);}
+
+/* 공지 박스 */
+.report-notice{background:#fffbf0;border:1px solid #e8d080;padding:14px 18px;margin-bottom:20px;border-radius:3px;font-size:12px;color:#6a5000;line-height:1.8;}
+.report-notice b{color:#8a6800;}
+
+/* 활용방안 */
+.usage-box{background:var(--surface2);border:1px solid var(--border);padding:18px 20px;margin-bottom:20px;border-radius:3px;}
+.usage-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:12px;border-bottom:2px solid var(--dw-orange);padding-bottom:8px;}
+.usage-item{font-size:12px;color:var(--text2);line-height:1.9;margin-bottom:6px;}
+.usage-item b{color:var(--dw-orange);}
+
+/* 대상자 헤더 */
+.report-header{background:linear-gradient(135deg,var(--dw-orange),var(--dw-orange2));color:#fff;padding:20px 24px;border-radius:3px;margin-bottom:20px;position:relative;overflow:hidden;}
+.report-header::before{content:'360°';font-family:'Bebas Neue',sans-serif;font-size:100px;position:absolute;right:-10px;bottom:-16px;color:rgba(255,255,255,0.08);line-height:1;pointer-events:none;}
+.report-header-name{font-size:24px;font-weight:900;}
+.report-header-meta{font-size:12px;opacity:.8;margin-top:4px;}
+
+/* 응답결과 표 */
+.result-section-title{font-size:14px;font-weight:800;color:var(--navy);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--dw-orange);}
+.result-table-wrap{overflow-x:auto;margin-bottom:20px;}
+.result-table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px;}
+.result-table th,.result-table td{border:1px solid var(--border);padding:9px 12px;text-align:center;}
+.result-table thead tr:first-child th{background:#2c3140;color:#fff;font-weight:800;font-size:11px;letter-spacing:.5px;}
+.result-table thead tr:last-child th{background:var(--surface2);font-weight:700;font-size:11px;color:var(--text2);}
+.result-table th.th-구분{background:var(--surface2);font-weight:700;text-align:left;min-width:60px;}
+.result-table td:first-child{font-weight:700;background:var(--surface2);text-align:left;}
+.td-pos{color:var(--green);font-weight:800;}
+.td-neg{color:var(--red);font-weight:800;}
+.result-table tr:hover td{background:#fffbf5;}
+
+/* 해석 가이드 */
+.guide-box{background:var(--surface);border:1px solid var(--border);padding:14px 18px;margin-bottom:20px;border-radius:3px;font-size:12px;color:var(--text2);line-height:1.9;}
+.guide-box b{color:var(--dw-orange);}
+
+/* 피드백 섹션 */
+.feedback-section{background:var(--surface);border:1px solid var(--border);padding:18px 20px;margin-bottom:16px;border-radius:3px;}
+.fb-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--dw-orange);}
+.fb-row{margin-bottom:12px;}
+.fb-row-label{font-size:11px;font-weight:800;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+.fb-self-dot{width:8px;height:8px;border-radius:50%;background:var(--dw-orange);flex-shrink:0;}
+.fb-other-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+.fb-content{background:var(--surface2);border-left:3px solid var(--border2);padding:10px 14px;font-size:13px;color:var(--text);line-height:1.7;border-radius:2px;white-space:pre-wrap;}
+.fb-content.empty{color:var(--text4);font-style:italic;font-size:12px;}
+.fb-other-list{display:grid;gap:6px;}
+.fb-other-item{background:var(--surface2);border-left:3px solid var(--blue);padding:8px 12px;font-size:12px;color:var(--text);line-height:1.6;border-radius:2px;}
+.fb-other-item .fb-evaluator{font-size:10px;color:var(--text4);margin-bottom:3px;}
+
+.toast{position:fixed;bottom:24px;right:24px;z-index:5000;background:var(--navy);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:var(--shadow-lg);transform:translateY(80px);opacity:0;transition:all .3s;border-left:4px solid var(--dw-orange);border-radius:3px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.sync-banner{position:fixed;top:0;left:0;right:0;z-index:9998;background:var(--dw-orange);color:#fff;font-size:12px;font-weight:700;text-align:center;padding:8px;display:none;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text3);}
+.empty-icon{font-size:44px;margin-bottom:12px;opacity:.5;}
+
+@media(max-width:680px){
+  .text-cards{grid-template-columns:1fr;}
+  .scale-row{gap:4px;}
+  .scale-btn{min-width:60px;font-size:10px;padding:7px 3px;}
+  .pos-banner{grid-template-columns:1fr;}
+  .pos-div{border-left:none;border-top:1px solid var(--border);padding-top:10px;}
+  .action-btns{flex-direction:column;}
+  .sidebar{width:240px;}
+}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:var(--border2);}
+</style>
+</head>
+<body>
+<div class="sync-banner" id="sync-banner"></div>
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<!-- ══ SPLASH ══ -->
+<div id="splash" class="screen active">
+  <div class="splash-grid"></div>
+  <div class="splash-deco">360</div>
+  <div class="splash-inner">
+    <div class="splash-tag">Daewoong Pharmaceutical · 다면평가 · Multi-Rater Evaluation</div>
+    <div class="splash-h">다면평가<br><span>360°</span></div>
+    <div class="splash-sub">Multi-Rater Evaluation System</div>
+    <div class="splash-desc">
+      본인/동료/직책자의 360도 평가를 통해 본인평가와 타인평가의 gap을 인식하고,<br>강점은 더욱 강화하고 부족한 점은 개선하여 직원이 성장할 수 있는 제도입니다.<br>
+      <span style="font-size:11px;opacity:.75">This 360° evaluation helps employees recognize gaps between self and others' perception to promote growth.</span>
+    </div>
+    <div class="splash-btns">
+      <button class="splash-btn splash-btn-primary" onclick="go('role-select')">평가 시작하기<small>START EVALUATION →</small></button>
+      <button class="splash-btn splash-btn-secondary" onclick="go('login-viewer')">결과 조회<small>VIEW RESULTS</small></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROLE SELECT ══ -->
+<div id="role-select" class="screen" style="align-items:center;justify-content:center;background:linear-gradient(135deg,#FFF4E8,#FDF8F3);">
+  <div style="width:100%;max-width:600px;padding:32px 24px;">
+    <button class="role-back" onclick="go('splash')">← 뒤로 · Back</button>
+    <div style="font-size:22px;font-weight:900;margin-bottom:5px;">평가자 유형 선택<br><span style="font-size:16px;font-weight:500;color:var(--text3)">Select Evaluator Type</span></div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.7">본인의 평가자 유형을 선택해 주세요.<br><span style="font-size:12px;color:var(--text4)">Please select your evaluator type to proceed.</span></div>
+    <div class="role-cards">
+      <div class="role-card self" onclick="selectRole('self')">
+        <div class="role-card-icon">🙋</div>
+        <div><div class="role-card-name">본인평가 · Self Evaluation</div><div class="role-card-desc">인턴 본인이 스스로를 평가 후, 그룹 내 동료도 평가합니다.<br><span style="font-size:11px">Intern evaluates themselves first, then evaluates group peers.</span></div></div>
+      </div>
+      <div class="role-card manager" onclick="selectRole('manager')">
+        <div class="role-card-icon">👔</div>
+        <div><div class="role-card-name">직책자평가 · Manager Evaluation</div><div class="role-card-desc">직책자로서 인턴을 평가합니다. 사번·이름·부서를 직접 입력합니다.<br><span style="font-size:11px">Managers evaluate interns. Enter your ID, name, and dept directly.</span></div></div>
+      </div>
+      <div class="role-card peer" onclick="selectRole('peer')">
+        <div class="role-card-icon">🤝</div>
+        <div><div class="role-card-name">동료평가 · Peer Evaluation</div><div class="role-card-desc">동료로서 인턴을 평가합니다. 사번·이름·부서를 직접 입력합니다.<br><span style="font-size:11px">Peers evaluate interns. Enter your ID, name, and dept directly.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 본인 LOGIN ══ -->
+<div id="login-self" class="screen" style="align-items:center;justify-content:center;background:linear-gradient(135deg,#FFF4E8,#FDF8F3);">
+  <div style="width:100%;max-width:440px;padding:24px;">
+    <button class="role-back" onclick="go('role-select')">← 뒤로 · Back</button>
+    <div class="login-card">
+      <div class="login-logo"><div class="login-logo-icon">🙋</div><div class="login-logo-txt">본인평가 · SELF EVALUATION</div></div>
+      <div class="login-h">본인 로그인<br><span style="font-size:14px;font-weight:500;color:var(--text3)">Intern Login</span></div>
+      <div class="login-desc">평가대상자 시트에 등록된 사번과 비밀번호로 로그인하세요.<br><span style="font-size:11px;color:var(--text4)">Login with your registered Employee ID and password.</span></div>
+      <div class="form-group"><label class="form-label">사번 · Employee ID</label><input class="form-input" id="self-id" placeholder="사번 / Employee ID" onkeydown="if(event.key==='Enter')document.getElementById('self-pw').focus()"></div>
+      <div class="form-group"><label class="form-label">비밀번호 · Password</label><input class="form-input" id="self-pw" type="password" placeholder="비밀번호 / Password" onkeydown="if(event.key==='Enter')loginSelf()"></div>
+      <button class="login-submit" onclick="loginSelf()">로그인 · Login</button>
+      <div class="login-err" id="self-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 직책자/동료 입력 ══ -->
+<div id="login-other" class="screen" style="align-items:center;justify-content:center;background:linear-gradient(135deg,#FFF4E8,#FDF8F3);">
+  <div style="width:100%;max-width:440px;padding:24px;">
+    <button class="role-back" onclick="go('role-select')">← 뒤로 · Back</button>
+    <div class="login-card">
+      <div class="login-logo"><div class="login-logo-icon" id="other-icon">👔</div><div class="login-logo-txt" id="other-logo-txt">직책자평가</div></div>
+      <div class="login-h" id="other-title">직책자 정보 입력</div>
+      <div class="login-desc" id="other-desc">사번·이름·부서를 정확히 입력해 주세요. 별도 계정 없이 진행됩니다.<br><span style="font-size:11px;color:var(--text4)">Enter your ID, name, and dept. No account required.</span></div>
+      <div class="form-group"><label class="form-label">사번 · Employee ID</label><input class="form-input" id="other-id" placeholder="사번 / Employee ID"></div>
+      <div class="form-group"><label class="form-label">이름 · Name</label><input class="form-input" id="other-name" placeholder="이름 / Name"></div>
+      <div class="form-group"><label class="form-label">부서 · Department</label><input class="form-input" id="other-dept" placeholder="부서 / Department"></div>
+      <button class="login-submit" onclick="loginOther()">평가 시작 · Start Evaluation</button>
+      <div class="login-err" id="other-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 결과 조회 LOGIN ══ -->
+<div id="login-viewer" class="screen" style="align-items:center;justify-content:center;background:linear-gradient(135deg,#FFF4E8,#FDF8F3);">
+  <div style="width:100%;max-width:440px;padding:24px;">
+    <button class="role-back" onclick="go('splash')">← 뒤로 · Back</button>
+    <div class="login-card">
+      <div class="login-logo"><div class="login-logo-icon">📊</div><div class="login-logo-txt">결과 조회 · RESULT VIEWER</div></div>
+      <div class="login-h">결과 조회 로그인<br><span style="font-size:14px;font-weight:500;color:var(--text3)">Viewer Login</span></div>
+      <div class="login-desc">직책자 시트에 등록된 사번과 비밀번호로 로그인하세요.<br><span style="font-size:11px;color:var(--text4)">Login with the Manager sheet credentials.</span></div>
+      <div class="form-group"><label class="form-label">사번 · Employee ID</label><input class="form-input" id="viewer-id" placeholder="사번 / Employee ID" onkeydown="if(event.key==='Enter')document.getElementById('viewer-pw').focus()"></div>
+      <div class="form-group"><label class="form-label">비밀번호 · Password</label><input class="form-input" id="viewer-pw" type="password" placeholder="비밀번호 / Password" onkeydown="if(event.key==='Enter')loginViewer()"></div>
+      <button class="login-submit" onclick="loginViewer()">조회 시스템 입장 · Enter Viewer</button>
+      <div class="login-err" id="viewer-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 평가 화면 ══ -->
+<div id="eval-screen" class="screen">
+  <div class="app-layout">
+    <div class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-logo">DAEWOONG · 다면평가 360°</div>
+        <div class="sidebar-role-badge" id="sb-role-badge"></div>
+      </div>
+      <div class="user-block">
+        <div class="user-av" id="sb-av">?</div>
+        <div><div class="user-name" id="sb-name">-</div><div class="user-dept" id="sb-dept">-</div></div>
+      </div>
+      <!-- 본인 섹션 -->
+      <div id="sb-self-section" class="d-none">
+        <div class="sb-section-hd">① 본인평가 · Self</div>
+        <div style="padding:4px 8px;">
+          <div class="cand-item" id="sb-self-item" onclick="selectSelf()">
+            <div class="cand-item-name" id="sb-self-name">나 자신 · Myself</div>
+            <div class="cand-item-badges"><span id="sb-self-bdg" class="bdg bdg-todo">미완료 · Pending</span></div>
+          </div>
+        </div>
+        <div class="sb-section-hd">② 동료평가 · Peers</div>
+      </div>
+      <div id="sb-search-wrap" class="d-none">
+        <div class="search-wrap"><input class="sidebar-search" id="sb-search" placeholder="🔍 이름/부서 검색 / Search" oninput="filterCands(this.value)"></div>
+      </div>
+      <div class="cand-list" id="cand-list"></div>
+      <div class="sidebar-foot">
+        <button class="foot-btn red" onclick="logout()">로그아웃 · Logout</button>
+      </div>
+    </div>
+    <div class="main-area">
+      <div class="main-header">
+        <div><div class="main-title" id="main-title">평가 대상자를 선택하세요</div><div class="main-sub" id="main-sub">Select an evaluatee from the list on the left</div></div>
+        <div class="autosave-ind" id="autosave-ind" style="display:none"><div class="autosave-dot" id="autosave-dot"></div><span id="autosave-txt">자동저장 대기</span></div>
+      </div>
+      <div class="main-body" id="main-body">
+        <div class="empty-state"><div class="empty-icon">📋</div><div style="font-size:14px;font-weight:700;margin-bottom:5px">평가 대상자를 선택해 주세요</div><div style="font-size:12px;color:var(--text4)">Select an evaluatee from the list on the left</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 결과 조회 화면 ══ -->
+<div id="viewer-screen" class="screen">
+  <div class="main-header">
+    <div><div class="main-title">평가 결과 조회 · Result Viewer</div><div class="main-sub" id="viewer-user-info">-</div></div>
+    <button onclick="logout()" style="padding:7px 16px;background:rgba(200,65,10,0.07);border:1px solid rgba(200,65,10,0.2);color:var(--red);font-size:12px;font-weight:600;border-radius:3px;cursor:pointer;font-family:inherit;">로그아웃 · Logout</button>
+  </div>
+  <div class="viewer-tabs">
+    <button class="vtab active" onclick="vTab('list')">📋 대상자 목록</button>
+    <button class="vtab" onclick="vTab('self')">본인평가 결과</button>
+    <button class="vtab" onclick="vTab('other')">타인평가 결과</button>
+    <button class="vtab" onclick="vTab('compare')">종합 비교</button>
+  </div>
+  <div class="main-body" id="viewer-body">
+    <div class="empty-state"><div class="empty-icon">🔄</div><div>데이터 로딩 중... / Loading...</div></div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════ */
+const GAS_URL='https://script.google.com/macros/s/AKfycbwLLdkTS7r90RYkU53XeE5r2XOHXHyaN_2Ke-HRAi1iE3-byq-wm5_S_rHQUN4liQTdAA/exec';
+
+/* ════════════════════════════════════════
+   평가 문항
+════════════════════════════════════════ */
+const QUESTIONS=[
+  {key:'q1',cat:'학습',catEn:'Learning',ko:'업무 수행에 필요한 지식과 스킬을 스스로 학습하고 업무에 적용하는가?',en:'Does the person proactively learn and apply knowledge and skills required for their work?'},
+  {key:'q2',cat:'소통',catEn:'Communication',ko:'본인의 업무 진행 상황을 팀장/멘토에게 투명하게 공유하고, 모르는 것이 있을 때 적극적으로 소통하여 해결하는가?',en:'Does the person share progress transparently and proactively communicate to resolve uncertainties?'},
+  {key:'q3',cat:'협력',catEn:'Collaboration',ko:'피드백을 수용하고, 더 나은 결과물을 위해 협력적인 태도를 보이는가?',en:'Does the person accept feedback and show a collaborative attitude for better outcomes?'},
+  {key:'q4',cat:'실행',catEn:'Execution',ko:'주어진 과제를 주도적으로 수행하고 하기로 한 일은 기한 내에 반드시 완료하는가?',en:'Does the person proactively carry out tasks and always complete work within deadlines?'},
+  {key:'q5',cat:'핵심가치',catEn:'Core Values',ko:'대웅의 핵심가치에 부합하는 인재인가?',en:"Does the person embody Daewoong's core values?"},
+  {key:'q6',cat:'추천의향',catEn:'Recommendation',ko:'앞으로도 함께 일할 동료로 추천할 의향이 있는가?',en:'Would you recommend this person as a colleague in the future?'},
+];
+const SCALE=[
+  {val:'5',ko:'매우 그렇다',en:'Strongly Agree',cls:'pos'},
+  {val:'4',ko:'그렇다',en:'Agree',cls:'pos'},
+  {val:'3',ko:'보통이다',en:'Neutral',cls:'neutral'},
+  {val:'2',ko:'아니다',en:'Disagree',cls:'neg'},
+  {val:'1',ko:'매우 아니다',en:'Strongly Disagree',cls:'neg'},
+  {val:'0',ko:'잘 모르겠다',en:'Not Sure',cls:'unknown'},
+];
+
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let currentRole=null,currentUser=null,currentMode=null;
+let CANDIDATES=[],MANAGERS={};
+let evalData={},selectedCandId=null,filteredCands=[];
+let autosaveTimer=null,currentViewerTab='list',selectedViewerCand=null;
+let viewerCache={};
+
+const LS='dw_360_v2';
+function saveLS(){try{localStorage.setItem(LS,JSON.stringify(evalData));}catch(e){}}
+function loadLS(){try{const d=localStorage.getItem(LS);if(d)evalData=JSON.parse(d);}catch(e){}}
+loadLS();
+
+/* ════════════════════════════════════════
+   UTILS
+════════════════════════════════════════ */
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showToast(msg,dur=2800){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+function showBanner(msg,bg,dur){const b=document.getElementById('sync-banner');b.textContent=msg;b.style.background=bg||'var(--dw-orange)';b.style.display=msg?'block':'none';if(dur)setTimeout(()=>b.style.display='none',dur);}
+function getKey(uid,candId){return uid+':'+candId;}
+function getEval(uid,candId){const k=getKey(uid,candId);if(!evalData[k])evalData[k]={scores:{},strength:'',improve:'',drafted:false,finalSubmitted:false,submittedAt:''};return evalData[k];}
+function calcPosNeg(scores){
+  let pos=0,neg=0,answered=0;
+  QUESTIONS.forEach(q=>{const v=scores[q.key];if(!v&&v!=='0')return;if(v==='0')return;answered++;if(v==='4'||v==='5')pos++;if(v==='1'||v==='2')neg++;});
+  return{pos,neg,answered};
+}
+
+/* ════════════════════════════════════════
+   NETWORK
+════════════════════════════════════════ */
+function jsonpFetch(url){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Math.random().toString(36).slice(2);
+    const s=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();reject(new Error('Timeout'));},18000);
+    function cleanup(){clearTimeout(timer);delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);}
+    window[cb]=(d)=>{cleanup();resolve(d);};
+    s.onerror=()=>{cleanup();reject(new Error('Network error'));};
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
+    document.head.appendChild(s);
+  });
+}
+async function gasPost(payload){
+  try{await fetch(GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});}
+  catch(e){console.warn('POST fail',e);}
+}
+async function syncData(silent){
+  try{
+    if(!silent)showBanner('⏳ 데이터 로드 중...');
+    const r=await jsonpFetch(GAS_URL+'?action=sync360');
+    if(!r||!r.ok)throw new Error(r?.msg||'failed');
+    CANDIDATES=r.candidates||[];MANAGERS=r.managers||{};
+    if(!silent)showBanner('✅ 완료','var(--green)',2000);
+    return true;
+  }catch(e){showBanner('⚠ 연결 실패: '+e.message,'#c45e0a',4000);return false;}
+}
+
+/* ════════════════════════════════════════
+   ROLE / LOGIN
+════════════════════════════════════════ */
+function selectRole(role){
+  currentRole=role;
+  if(role==='self'){go('login-self');}
+  else{
+    const isMgr=role==='manager';
+    document.getElementById('other-icon').textContent=isMgr?'👔':'🤝';
+    document.getElementById('other-logo-txt').textContent=isMgr?'직책자평가 · MANAGER EVAL':'동료평가 · PEER EVAL';
+    document.getElementById('other-title').innerHTML=isMgr?'직책자 정보 입력<br><span style="font-size:14px;font-weight:500;color:var(--text3)">Enter Manager Information</span>':'동료 정보 입력<br><span style="font-size:14px;font-weight:500;color:var(--text3)">Enter Peer Information</span>';
+    go('login-other');
+  }
+}
+
+async function loginSelf(){
+  const id=document.getElementById('self-id').value.trim();
+  const pw=document.getElementById('self-pw').value.trim();
+  const err=document.getElementById('self-err');
+  err.style.display='none';
+  if(!id||!pw){err.textContent='⚠ 사번과 비밀번호를 입력해 주세요';err.style.display='block';return;}
+  showBanner('⏳ 로그인 중...');
+  await syncData(true);
+  const cand=CANDIDATES.find(c=>String(c.id)===String(id));
+  if(!cand){err.textContent='⚠ 등록되지 않은 사번입니다 · Employee ID not found';err.style.display='block';showBanner('','',1);return;}
+  if(String(cand.pw)!==String(pw)){err.textContent='⚠ 비밀번호가 올바르지 않습니다 · Incorrect password';err.style.display='block';showBanner('','',1);return;}
+  currentUser={id,name:cand.name,dept:cand.dept2||cand.dept1||'',group:cand.group};
+  currentMode='self';
+  enterEvalScreen();
+}
+
+async function loginOther(){
+  const id=document.getElementById('other-id').value.trim();
+  const name=document.getElementById('other-name').value.trim();
+  const dept=document.getElementById('other-dept').value.trim();
+  const err=document.getElementById('other-err');
+  err.style.display='none';
+  if(!id||!name||!dept){err.textContent='⚠ 사번, 이름, 부서를 모두 입력해 주세요';err.style.display='block';return;}
+  showBanner('⏳ 데이터 로드 중...');
+  await syncData(true);
+  currentUser={id,name,dept};
+  currentMode=currentRole;
+  enterEvalScreen();
+}
+
+async function loginViewer(){
+  const id=document.getElementById('viewer-id').value.trim();
+  const pw=document.getElementById('viewer-pw').value.trim();
+  const err=document.getElementById('viewer-err');
+  err.style.display='none';
+  if(!id||!pw){err.textContent='⚠ 사번과 비밀번호를 입력해 주세요';err.style.display='block';return;}
+  showBanner('⏳ 로그인 중...');
+  await syncData(true);
+  const mgr=MANAGERS[id];
+  if(!mgr||String(mgr.pw)!==String(pw)){err.textContent='⚠ 사번 또는 비밀번호가 올바르지 않습니다';err.style.display='block';showBanner('','',1);return;}
+  currentUser={id,name:mgr.name,group:mgr.group};
+  currentRole='viewer';
+  document.getElementById('viewer-user-info').textContent=`${mgr.name} (${id}) · 그룹: ${mgr.group||'전체'}`;
+  go('viewer-screen');showBanner('','',1);
+  vTab('list');
+}
+
+/* ════════════════════════════════════════
+   EVAL SCREEN
+════════════════════════════════════════ */
+function enterEvalScreen(){
+  showBanner('','',1);
+  document.getElementById('sb-av').textContent=currentUser.name.charAt(0);
+  document.getElementById('sb-name').textContent=currentUser.name;
+  document.getElementById('sb-dept').textContent=`${currentUser.id} · ${currentUser.dept||''}`;
+  const badge=document.getElementById('sb-role-badge');
+  const badgeMap={self:'본인평가 · Self',manager:'직책자평가 · Manager',peer:'동료평가 · Peer'};
+  const clsMap={self:'badge-self',manager:'badge-manager',peer:'badge-peer'};
+  badge.textContent=badgeMap[currentMode]||'';
+  badge.className='sidebar-role-badge '+(clsMap[currentMode]||'');
+
+  if(currentMode==='self'){
+    document.getElementById('sb-self-section').classList.remove('d-none');
+    document.getElementById('sb-search-wrap').classList.add('d-none');
+    document.getElementById('sb-self-name').textContent=currentUser.name+' (나)';
+    filteredCands=CANDIDATES.filter(c=>c.group===currentUser.group&&String(c.id)!==String(currentUser.id));
+  } else {
+    document.getElementById('sb-self-section').classList.add('d-none');
+    document.getElementById('sb-search-wrap').classList.remove('d-none');
+    filteredCands=[...CANDIDATES];
+  }
+  renderCandList();
+  go('eval-screen');
+}
+
+function filterCands(q){
+  filteredCands=q?CANDIDATES.filter(c=>c.name.includes(q)||(c.dept1||'').includes(q)||(c.dept2||'').includes(q)||String(c.id).includes(q)):[...CANDIDATES];
+  renderCandList();
+}
+
+function renderCandList(){
+  const list=document.getElementById('cand-list');
+  if(!filteredCands.length){list.innerHTML='<div style="padding:18px;font-size:12px;color:rgba(255,255,255,0.3);text-align:center">배정된 인원이 없습니다</div>';return;}
+  list.innerHTML=filteredCands.map(c=>{
+    const ev=evalData[getKey(currentUser.id,c.id)];
+    const isDone=ev?.finalSubmitted,isDraft=ev?.drafted&&!isDone;
+    const badge=isDone?'<span class="bdg bdg-done">✅ 완료 · Done</span>':isDraft?'<span class="bdg bdg-draft">💾 임시저장 · Draft</span>':'<span class="bdg bdg-todo">미완료 · Pending</span>';
+    return`<div class="cand-item${selectedCandId===c.id?' active':''}" onclick="selectCand('${c.id}')">
+      <div class="cand-item-name">${c.name}</div>
+      <div class="cand-item-dept">${c.dept1||''}${c.dept2?' / '+c.dept2:''}</div>
+      <div class="cand-item-badges">${badge}</div>
+    </div>`;
+  }).join('');
+  // self badge 업데이트
+  if(currentMode==='self'){
+    const sEv=evalData[getKey(currentUser.id,'__self__')];
+    const sDone=sEv?.finalSubmitted,sDraft=sEv?.drafted&&!sDone;
+    const sbdg=document.getElementById('sb-self-bdg');
+    if(sbdg){sbdg.textContent=sDone?'✅ 완료 · Done':sDraft?'💾 임시저장 · Draft':'미완료 · Pending';sbdg.className='bdg '+(sDone?'bdg-done':sDraft?'bdg-draft':'bdg-todo');}
+  }
+}
+
+function selectSelf(){selectedCandId='__self__';renderCandList();renderEvalForm('__self__');}
+function selectCand(id){selectedCandId=id;renderCandList();renderEvalForm(id);}
+
+/* ════════════════════════════════════════
+   EVAL FORM
+════════════════════════════════════════ */
+function renderEvalForm(candId){
+  const isSelf=(candId==='__self__');
+  const cand=isSelf?currentUser:CANDIDATES.find(c=>String(c.id)===String(candId));
+  if(!cand)return;
+  const ev=getEval(currentUser.id,candId);
+  const submitted=ev.finalSubmitted;
+  document.getElementById('main-title').textContent=isSelf?`${currentUser.name} 님 본인평가 · Self Eval`:`${cand.name} 님 평가`;
+  document.getElementById('main-sub').textContent=isSelf?'Self Evaluation':`${cand.dept1||''}${cand.dept2?' / '+cand.dept2:''} · ID: ${cand.id}`;
+  document.getElementById('autosave-ind').style.display='flex';
+  const{pos,neg,answered}=calcPosNeg(ev.scores);
+  const posR=answered>0?Math.round(pos/answered*100):null;
+  const negR=answered>0?Math.round(neg/answered*100):null;
+
+  const qHTML=QUESTIONS.map((q,i)=>{
+    const cur=ev.scores[q.key]||null;
+    const scaleHTML=SCALE.map(s=>{
+      const sel=cur===s.val;
+      const cls=sel?`selected-${s.cls}`:'';
+      return`<button class="scale-btn ${cls}" data-q="${q.key}" data-v="${s.val}" onclick="setScore('${q.key}','${s.val}')" ${submitted?'disabled':''}>${s.ko}<span class="en">${s.en}</span></button>`;
+    }).join('');
+    const curS=cur!==null?SCALE.find(s=>s.val===cur):null;
+    return`<div class="q-card">
+      <div class="q-num">Q${i+1} / ${QUESTIONS.length}</div>
+      <span class="q-cat">${q.cat} · ${q.catEn}</span>
+      <div class="q-text-ko">${q.ko}</div>
+      <div class="q-text-en">${q.en}</div>
+      <div class="scale-row">${scaleHTML}</div>
+      <div class="q-sel-label" id="ql-${q.key}">${curS?`선택: ${curS.ko} / ${curS.en}`:''}</div>
+    </div>`;
+  }).join('');
+
+  const actionHTML=submitted
+    ?`<div class="submitted-box"><div style="font-size:26px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:800;color:var(--green);margin-bottom:3px">최종 제출 완료 · Submission Complete</div><div style="font-size:12px;color:var(--text3)">제출 완료된 평가는 수정할 수 없습니다 · Cannot be edited after submission.<br>${ev.submittedAt?new Date(ev.submittedAt).toLocaleString('ko'):''}</div></div>`
+    :`<div class="action-box"><div class="action-box-title">평가 저장 · Save Evaluation</div><div class="action-box-desc">점수 입력 시 기기에 <b>자동저장</b>됩니다. Auto-saved locally on input.<br><b>임시저장 / Save Draft</b>: Sheets에 임시 저장합니다.<br><b>최종 제출 / Final Submit</b> 후에는 수정 불가합니다.</div><div class="action-btns"><button class="btn-draft" onclick="draftEval('${candId}')">💾 임시저장 · Save Draft</button><button class="btn-final" onclick="confirmSubmit('${candId}')">✅ 최종 제출 · Final Submit</button></div>${ev.drafted?`<div style="margin-top:10px;font-size:11px;color:var(--text3);padding:8px 12px;background:var(--surface2);border-radius:3px">💾 임시저장: ${ev.draftedAt?new Date(ev.draftedAt).toLocaleString('ko'):''}</div>`:''}</div>`;
+
+  document.getElementById('main-body').innerHTML=`
+    ${isSelf?`<div class="self-done-notice"><div style="font-size:13px;font-weight:800;color:var(--dw-orange);margin-bottom:4px">🙋 본인평가 · Self Evaluation</div><div style="font-size:12px;color:var(--text2);line-height:1.7">본인 스스로에 대해 솔직하게 평가해 주세요. 본인평가 제출 후 좌측 목록에서 동료평가를 진행합니다.<br><span style="font-size:11px;color:var(--text3)">Please evaluate yourself honestly. After submitting, proceed to peer evaluations.</span></div></div>`:''}
+    <div class="cand-card">
+      <div class="cand-card-label">${isSelf?'본인평가 대상 · SELF':'피평가자 · EVALUATEE'}</div>
+      <div class="cand-card-name">${cand.name}</div>
+      <div class="cand-card-meta"><span class="cand-meta-chip">🆔 ${cand.id||currentUser.id}</span>${!isSelf?`<span class="cand-meta-chip">🏢 ${cand.dept1||'-'}</span><span class="cand-meta-chip">📍 ${cand.dept2||'-'}</span>`:''}${currentMode?`<span class="cand-meta-chip">${{self:'본인평가',manager:'직책자평가',peer:'동료평가'}[currentMode]}</span>`:''}</div>
+    </div>
+    <div class="notice-box">📌 <b>평가 안내</b> · Evaluation Guide<br>• 평가척도: <b>매우그렇다(5) / 그렇다(4) / 보통이다(3) / 아니다(2) / 매우아니다(1) / 잘모르겠다</b><br>&nbsp;&nbsp;Scale: Strongly Agree / Agree / Neutral / Disagree / Strongly Disagree / Not Sure<br>• 잘 모르는 항목은 <b>"잘 모르겠다"</b>를 선택해 주세요 · Select <b>"Not Sure"</b> for items you cannot assess.<br>• <b>최종 제출 후 수정 불가</b>합니다 · Cannot be edited after final submission.</div>
+    <div class="section-hd"><span class="section-tag">객관식 평가 · Objective Questions (Q1~Q6)</span><span class="section-line"></span></div>
+    <div class="q-cards">${qHTML}</div>
+    <div class="pos-banner">
+      <div class="pos-item"><div class="pv pv-green">${posR!==null?posR+'%':'-'}</div><div class="pl">긍정률 <small>Positive Rate</small></div></div>
+      <div class="pos-item pos-div"><div class="pv pv-red">${negR!==null?negR+'%':'-'}</div><div class="pl">부정률 <small>Negative Rate</small></div></div>
+      <div class="pos-item pos-div"><div class="pv pv-gray">${answered}<span style="font-size:18px"> / ${QUESTIONS.length}</span></div><div class="pl">응답 수 <small>Answered</small></div></div>
+    </div>
+    <div class="section-hd"><span class="section-tag">주관식 · Open-Ended (Q7~Q8)</span><span class="section-line"></span></div>
+    <div class="text-cards">
+      <div class="text-card"><div class="text-card-label lbl-strength">Q7 · 장점 / Strengths</div><div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.6">평가 대상자의 장점에 대해 지속 발전시킬 내용을 피드백해 주세요.<br><span style="font-style:italic">Feedback on strengths to further develop.</span></div><textarea class="eval-textarea" id="ta-strength" placeholder="장점 피드백..." ${submitted?'disabled':''}>${ev.strength||''}</textarea></div>
+      <div class="text-card"><div class="text-card-label lbl-improve">Q8 · 개선점 / Improvements</div><div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.6">평가 대상자의 개선/보완해야 할 사항을 구체적으로 피드백해 주세요.<br><span style="font-style:italic">Specific feedback on areas for improvement.</span></div><textarea class="eval-textarea" id="ta-improve" placeholder="개선점 피드백..." ${submitted?'disabled':''}>${ev.improve||''}</textarea></div>
+    </div>
+    ${actionHTML}`;
+  if(!submitted){
+    document.getElementById('ta-strength').addEventListener('input',triggerAutosave);
+    document.getElementById('ta-improve').addEventListener('input',triggerAutosave);
+  }
+}
+
+/* ════════════════════════════════════════
+   SCORE / SAVE
+════════════════════════════════════════ */
+function setScore(qKey,val){
+  if(!selectedCandId||!currentUser)return;
+  const ev=getEval(currentUser.id,selectedCandId);
+  if(ev.finalSubmitted){showToast('최종 제출된 평가는 수정할 수 없습니다');return;}
+  ev.scores[qKey]=val;
+  document.querySelectorAll(`[data-q="${qKey}"]`).forEach(b=>{
+    const s=SCALE.find(s=>s.val===b.dataset.v);
+    b.className='scale-btn'+(b.dataset.v===val?` selected-${s?.cls||''}` :'');
+  });
+  const sel=SCALE.find(s=>s.val===val);
+  const lbl=document.getElementById('ql-'+qKey);
+  if(lbl&&sel)lbl.textContent=`선택: ${sel.ko} / ${sel.en}`;
+  updatePosBanner();triggerAutosave();
+}
+
+function updatePosBanner(){
+  const ev=getEval(currentUser.id,selectedCandId);
+  const{pos,neg,answered}=calcPosNeg(ev.scores);
+  const posR=answered>0?Math.round(pos/answered*100):null;
+  const negR=answered>0?Math.round(neg/answered*100):null;
+  const pvs=document.querySelectorAll('.pos-banner .pv');
+  if(pvs[0])pvs[0].textContent=posR!==null?posR+'%':'-';
+  if(pvs[1])pvs[1].textContent=negR!==null?negR+'%':'-';
+  if(pvs[2])pvs[2].innerHTML=answered+`<span style="font-size:18px"> / ${QUESTIONS.length}</span>`;
+}
+
+function triggerAutosave(){
+  const dot=document.getElementById('autosave-dot'),txt=document.getElementById('autosave-txt');
+  if(dot)dot.classList.remove('saved');if(txt)txt.textContent='저장 중...';
+  clearTimeout(autosaveTimer);
+  autosaveTimer=setTimeout(()=>{localSave();if(dot)dot.classList.add('saved');if(txt)txt.textContent='자동저장됨 · '+new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});},800);
+}
+function localSave(){
+  if(!selectedCandId||!currentUser)return;
+  const ev=getEval(currentUser.id,selectedCandId);
+  if(ev.finalSubmitted)return;
+  const ts=document.getElementById('ta-strength'),ti=document.getElementById('ta-improve');
+  if(ts)ev.strength=ts.value;if(ti)ev.improve=ti.value;saveLS();
+}
+
+/* ════════════════════════════════════════
+   DRAFT / SUBMIT
+════════════════════════════════════════ */
+async function draftEval(candId){
+  localSave();
+  const ev=getEval(currentUser.id,candId);
+  if(ev.finalSubmitted){showToast('이미 최종 제출된 평가입니다');return;}
+  ev.drafted=true;ev.draftedAt=new Date().toISOString();saveLS();renderCandList();
+  const cand=CANDIDATES.find(c=>String(c.id)===String(candId))||{name:currentUser.name};
+  await pushToSheets(candId,ev,false);
+  showToast(`💾 ${candId==='__self__'?'본인평가':cand.name} 임시저장 완료 · Draft saved`);
+  renderEvalForm(candId);
+}
+
+function confirmSubmit(candId){
+  const answered=Object.values(getEval(currentUser.id,candId).scores).filter(v=>v!==undefined).length;
+  const isSelf=candId==='__self__';
+  const cand=isSelf?{name:currentUser.name}:CANDIDATES.find(c=>String(c.id)===String(candId))||{name:candId};
+  if(!confirm(`최종 제출하시겠습니까?\nAre you sure you want to submit finally?\n\n▪ 대상: ${cand.name}${answered<QUESTIONS.length?`\n⚠ ${QUESTIONS.length-answered}개 미응답 항목이 있습니다.`:''}\n\n⚠ 최종 제출 후에는 수정할 수 없습니다.\n⚠ Once submitted, it cannot be modified.`))return;
+  submitEval(candId);
+}
+
+async function submitEval(candId){
+  localSave();
+  const ev=getEval(currentUser.id,candId);
+  ev.drafted=true;ev.finalSubmitted=true;ev.submittedAt=new Date().toISOString();
+  saveLS();renderCandList();
+  await pushToSheets(candId,ev,true);
+  const cand=CANDIDATES.find(c=>String(c.id)===String(candId))||{name:currentUser.name};
+  showToast(`✅ ${candId==='__self__'?'본인평가':cand.name} 최종 제출 완료 · Submitted`);
+  renderEvalForm(candId);
+}
+
+async function pushToSheets(candId,ev,isFinal){
+  const isSelf=candId==='__self__';
+  const cand=isSelf?{id:currentUser.id,name:currentUser.name,dept1:'',dept2:''}:CANDIDATES.find(c=>String(c.id)===String(candId))||{id:candId,name:candId,dept1:'',dept2:''};
+  const typeMap={self:'본인평가',manager:'직책자평가',peer:'동료평가'};
+  await gasPost({
+    action:'save360',
+    evalType:isSelf?'본인평가':typeMap[currentMode]||currentMode,
+    evaluator_id:currentUser.id,evaluator_name:currentUser.name,evaluator_dept:currentUser.dept||'',
+    cand_id:cand.id,cand_name:cand.name,cand_dept1:cand.dept1||'',cand_dept2:cand.dept2||'',
+    scores:QUESTIONS.map(q=>ev.scores[q.key]||''),
+    strength:ev.strength||'',improve:ev.improve||'',
+    submitted_at:ev.submittedAt||new Date().toISOString(),
+    status:isFinal?'최종제출':'임시저장'
+  });
+}
+
+/* ════════════════════════════════════════
+   VIEWER
+════════════════════════════════════════ */
+function vTab(tab){
+  currentViewerTab=tab;
+  document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',['list','self','other','compare'][i]===tab));
+  if(tab==='list')renderViewerList();
+  else if(selectedViewerCand)renderReport(selectedViewerCand,tab);
+  else renderViewerList();
+}
+
+async function renderViewerList(){
+  document.getElementById('viewer-body').innerHTML='<div class="empty-state"><div class="empty-icon">🔄</div><div>데이터 로드 중...</div></div>';
+  try{
+    const r=await jsonpFetch(GAS_URL+'?action=getCandList&group='+(currentUser.group||''));
+    const cands=r?.candidates||CANDIDATES;
+    document.getElementById('viewer-body').innerHTML=`
+      <div style="margin-bottom:16px;font-size:13px;color:var(--text3)">평가 대상자를 클릭하면 상세 결과를 조회할 수 있습니다 / Click an evaluatee to view detailed results.</div>
+      <div class="viewer-cand-grid">${cands.map(c=>`
+        <div class="viewer-cand-card" onclick="openReport('${c.id}')">
+          <div class="vc-name">${c.name}</div>
+          <div class="vc-dept">${c.dept1||''}${c.dept2?' / '+c.dept2:''}</div>
+          <div class="vc-count">🆔 ${c.id}</div>
+        </div>`).join('')}
+      </div>`;
+  }catch(e){document.getElementById('viewer-body').innerHTML='<div class="empty-state"><div class="empty-icon">⚠</div><div>데이터 로드 실패 / Load failed</div></div>';}
+}
+
+async function openReport(candId){
+  selectedViewerCand=candId;
+  document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',i===1));
+  currentViewerTab='self';
+  renderReport(candId,'self');
+}
+
+async function renderReport(candId,tab){
+  document.getElementById('viewer-body').innerHTML='<div class="empty-state"><div class="empty-icon">🔄</div><div>결과 로드 중...</div></div>';
+  const cand=CANDIDATES.find(c=>String(c.id)===String(candId));
+  let selfData=[],otherData=[];
+  try{
+    const r=await jsonpFetch(GAS_URL+'?action=getResults360&candId='+candId);
+    selfData=r?.selfData||[];otherData=r?.otherData||[];
+    viewerCache[candId]={selfData,otherData};
+  }catch(e){
+    if(viewerCache[candId]){selfData=viewerCache[candId].selfData;otherData=viewerCache[candId].otherData;}
+  }
+
+  const candName=cand?.name||candId;
+  const candDept=(cand?.dept1||'')+(cand?.dept2?' / '+cand.dept2:'');
+
+  // 긍정/부정률 계산
+  function calcRates(rows){
+    const res={total:{pos:0,neg:0,cnt:0}};
+    QUESTIONS.forEach(q=>{res[q.key]={pos:0,neg:0,cnt:0};});
+    rows.forEach(row=>{
+      QUESTIONS.forEach((q,i)=>{
+        const v=String(row.scores?.[i]||'');
+        if(!v||v==='0')return;
+        res[q.key].cnt++;res.total.cnt++;
+        if(v==='4'||v==='5'){res[q.key].pos++;res.total.pos++;}
+        if(v==='1'||v==='2'){res[q.key].neg++;res.total.neg++;}
+      });
+    });
+    function pct(p,c){return c>0?Math.round(p/c*100)+'%':'-';}
+    const out={total:{pos:pct(res.total.pos,res.total.cnt),neg:pct(res.total.neg,res.total.cnt)}};
+    QUESTIONS.forEach(q=>{out[q.key]={pos:pct(res[q.key].pos,res[q.key].cnt),neg:pct(res[q.key].neg,res[q.key].cnt)};});
+    return out;
+  }
+
+  const selfRates=calcRates(selfData);
+  const otherRates=calcRates(otherData);
+
+  // 피드백 수집
+  const selfStrength=selfData.map(r=>r.strength).filter(Boolean);
+  const selfImprove=selfData.map(r=>r.improve).filter(Boolean);
+  const otherStrength=otherData.map(r=>({name:r.evaluator_name,dept:r.evaluator_dept,text:r.strength})).filter(r=>r.text);
+  const otherImprove=otherData.map(r=>({name:r.evaluator_name,dept:r.evaluator_dept,text:r.improve})).filter(r=>r.text);
+
+  // 표 HTML
+  function buildTable(selfR,otherR){
+    const cols=['total',...QUESTIONS.map(q=>q.key)];
+    const colNames=['종합',...QUESTIONS.map(q=>q.cat)];
+    return`<table class="result-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="th-구분">구분</th>
+          ${colNames.map(n=>`<th colspan="2">${n}</th>`).join('')}
+        </tr>
+        <tr>${cols.map(()=>'<th>긍정</th><th>부정</th>').join('')}</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>본인</td>
+          ${cols.map(k=>`<td class="td-pos">${selfR[k]?.pos||'-'}</td><td class="td-neg">${selfR[k]?.neg||'-'}</td>`).join('')}
+        </tr>
+        <tr>
+          <td>타인</td>
+          ${cols.map(k=>`<td class="td-pos">${otherR[k]?.pos||'-'}</td><td class="td-neg">${otherR[k]?.neg||'-'}</td>`).join('')}
+        </tr>
+      </tbody>
+    </table>`;
+  }
+
+  document.getElementById('viewer-body').innerHTML=`<div class="report-wrap">
+    <button class="report-back" onclick="vTab('list')">← 목록으로 / Back to List</button>
+
+    <div class="report-notice">
+      ※ 본 레포트는 면담 활용을 목적으로 작성된 자료로, <b>직책자에게만 제한적으로 공개</b>됩니다.<br>
+      평가자를 유추할 수 있는 세부 정보가 포함되어 있으므로, <b>피면담자(인턴)에게는 공유를 지양</b>해 주시기 바랍니다.<br>
+      <span style="font-size:11px;color:#8a6800">※ This report is strictly for interview purposes and is <b>restricted to managers only</b>. Please do not share with interns (evaluatees) as it contains information that may identify individual evaluators.</span>
+    </div>
+
+    <div class="report-header">
+      <div style="font-size:11px;opacity:.7;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">다면평가 360° · Multi-Rater Evaluation Report</div>
+      <div class="report-header-name">${candName}</div>
+      <div class="report-header-meta">${candDept} · ID: ${candId} · 응답자: 본인 ${selfData.length}명 / 타인 ${otherData.length}명</div>
+    </div>
+
+    <div class="usage-box">
+      <div class="usage-title">■ 다면평가 활용방안 · How to Use This Report</div>
+      <div class="usage-item"><b>1.</b> 본 레포트는 다면평가 결과를 통해 인턴의 <b>자기인식 수준(자기객관화)</b>을 확인하기 위한 목적입니다. 본인이 인식하는 자기 모습과 타인이 인식하는 모습을 비교하여, 인식 간 차이를 확인하고 성장 방향을 도출하고자 합니다.</div>
+      <div class="usage-item" style="margin-top:10px;"><b>2.</b> 다면평가 질문리스트<br>
+        ${QUESTIONS.map(q=>`<span style="display:inline-block;margin:2px 0">[${q.cat}] ${q.ko}</span><br>`).join('')}
+      </div>
+      <div class="usage-item" style="margin-top:10px;"><b>3.</b> 응답 경향 변환 기준 및 해석 가이드<br>
+        <span style="color:var(--text3)">%는 절대적인 역량 수준이 아닌, 주변 구성원의 인식 경향을 나타내는 참고 지표입니다.</span><br>
+        <b style="color:var(--green)">긍정:</b> 매우그렇다, 그렇다 (높을수록 해당 항목에 대해 긍정적으로 인식되는 경향이 강함)<br>
+        &nbsp;&nbsp;&nbsp;ex. 학습 긍정 80% → 학습 역량 전반 긍정적으로 인식<br>
+        <b style="color:var(--red)">부정:</b> 아니다, 매우아니다 (높을수록 해당 항목에 대해 부정적으로 인식되는 경향이 강함)<br>
+        &nbsp;&nbsp;&nbsp;ex. 실행 부정 80% → 실행 역량 전반 부정적으로 인식
+      </div>
+    </div>
+
+    <div class="result-section-title">2. (객관식) 응답 결과 · Objective Response Results</div>
+    <div class="result-table-wrap">${buildTable(selfRates,otherRates)}</div>
+
+    <div class="guide-box">
+      <b>※ 응답 수</b> — 본인: ${selfData.length}명 / 타인(직책자+동료): ${otherData.length}명<br>
+      <b style="color:var(--green)">긍정률</b>: '매우그렇다' + '그렇다' 응답 비율 · <b style="color:var(--red)">부정률</b>: '아니다' + '매우아니다' 응답 비율<br>
+      '보통이다' 및 '잘 모르겠다' 응답은 긍정/부정률 산출에서 제외됩니다.
+    </div>
+
+    <div class="result-section-title" style="margin-top:24px">3. (주관식) 피드백 · Open-Ended Feedback</div>
+
+    <div class="feedback-section">
+      <div class="fb-title">💚 장점을 지속 발전시킬 피드백 · Strengths Feedback</div>
+      <div class="fb-row">
+        <div class="fb-row-label"><div class="fb-self-dot"></div>본인 / Self</div>
+        ${selfStrength.length?selfStrength.map(t=>`<div class="fb-content">${t}</div>`).join(''):'<div class="fb-content empty">응답 없음 / No response</div>'}
+      </div>
+      <div class="fb-row" style="margin-top:14px">
+        <div class="fb-row-label"><div class="fb-other-dot"></div>타인 (직책자 + 동료) / Others</div>
+        ${otherStrength.length
+          ?`<div class="fb-other-list">${otherStrength.map(r=>`<div class="fb-other-item"><div class="fb-evaluator">${r.name||'익명'} · ${r.dept||''}</div>${r.text}</div>`).join('')}</div>`
+          :'<div class="fb-content empty">응답 없음 / No response</div>'}
+      </div>
+    </div>
+
+    <div class="feedback-section">
+      <div class="fb-title">🔶 개선/보완해야 할 사항에 대한 피드백 · Improvement Feedback</div>
+      <div class="fb-row">
+        <div class="fb-row-label"><div class="fb-self-dot"></div>본인 / Self</div>
+        ${selfImprove.length?selfImprove.map(t=>`<div class="fb-content">${t}</div>`).join(''):'<div class="fb-content empty">응답 없음 / No response</div>'}
+      </div>
+      <div class="fb-row" style="margin-top:14px">
+        <div class="fb-row-label"><div class="fb-other-dot"></div>타인 (직책자 + 동료) / Others</div>
+        ${otherImprove.length
+          ?`<div class="fb-other-list">${otherImprove.map(r=>`<div class="fb-other-item"><div class="fb-evaluator">${r.name||'익명'} · ${r.dept||''}</div>${r.text}</div>`).join('')}</div>`
+          :'<div class="fb-content empty">응답 없음 / No response</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+function logout(){go('splash');currentUser=null;currentRole=null;currentMode=null;selectedCandId=null;selectedViewerCand=null;}
+</script>
+</body>
+</html>
