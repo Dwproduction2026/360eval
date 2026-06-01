@@ -374,6 +374,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
       <div class="cand-list" id="cand-list"></div>
       <div class="sidebar-foot">
+        <button id="sb-final-all-btn" class="d-none" style="width:100%;padding:11px;background:var(--green);border:none;color:#fff;font-size:13px;font-weight:800;border-radius:3px;cursor:pointer;font-family:inherit;margin-bottom:7px;letter-spacing:.3px;transition:all .2s;" onmouseover="this.style.background='#1f5038'" onmouseout="this.style.background='var(--green)'" onclick="confirmFinalSubmitAll()">✅ 전체 최종 제출<br><span style="font-size:10px;font-weight:400;opacity:.85">Final Submit All</span></button>
         <button class="foot-btn red" onclick="logout()">로그아웃 · Logout</button>
       </div>
     </div>
@@ -396,10 +397,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <button onclick="logout()" style="padding:7px 16px;background:rgba(200,65,10,0.07);border:1px solid rgba(200,65,10,0.2);color:var(--red);font-size:12px;font-weight:600;border-radius:3px;cursor:pointer;font-family:inherit;">로그아웃 · Logout</button>
   </div>
   <div class="viewer-tabs">
-    <button class="vtab active" onclick="vTab('list')">📋 대상자 목록</button>
-    <button class="vtab" onclick="vTab('self')">본인평가 결과</button>
-    <button class="vtab" onclick="vTab('other')">타인평가 결과</button>
-    <button class="vtab" onclick="vTab('compare')">종합 비교</button>
+    <button class="vtab active" onclick="vTab('list')">📋 대상자 목록 · Evaluatee List</button>
+    <button class="vtab" onclick="vTab('report')">📊 평가 결과 · Results</button>
   </div>
   <div class="main-body" id="viewer-body">
     <div class="empty-state"><div class="empty-icon">🔄</div><div>데이터 로딩 중... / Loading...</div></div>
@@ -570,10 +569,12 @@ function enterEvalScreen(){
     document.getElementById('sb-self-section').classList.remove('d-none');
     document.getElementById('sb-search-wrap').classList.add('d-none');
     document.getElementById('sb-self-name').textContent=currentUser.name+' (나)';
+    document.getElementById('sb-final-all-btn').classList.remove('d-none');
     filteredCands=CANDIDATES.filter(c=>c.group===currentUser.group&&String(c.id)!==String(currentUser.id));
   } else {
     document.getElementById('sb-self-section').classList.add('d-none');
     document.getElementById('sb-search-wrap').classList.remove('d-none');
+    document.getElementById('sb-final-all-btn').classList.add('d-none');
     filteredCands=[...CANDIDATES];
   }
   renderCandList();
@@ -644,9 +645,16 @@ function renderEvalForm(candId){
     </div>`;
   }).join('');
 
+  const isSelfMode=(currentMode==='self'); // 본인평가 모드 여부
+  const isInternPeer=(isSelfMode&&!isSelf); // 인턴이 동료를 평가하는 경우
+
   const actionHTML=submitted
     ?`<div class="submitted-box"><div style="font-size:26px;margin-bottom:8px">✅</div><div style="font-size:15px;font-weight:800;color:var(--green);margin-bottom:3px">최종 제출 완료 · Submission Complete</div><div style="font-size:12px;color:var(--text3)">제출 완료된 평가는 수정할 수 없습니다 · Cannot be edited after submission.<br>${ev.submittedAt?new Date(ev.submittedAt).toLocaleString('ko'):''}</div></div>`
-    :`<div class="action-box"><div class="action-box-title">평가 저장 · Save Evaluation</div><div class="action-box-desc">점수 입력 시 기기에 <b>자동저장</b>됩니다. Auto-saved locally on input.<br><b>임시저장 / Save Draft</b>: Sheets에 임시 저장합니다.<br><b>최종 제출 / Final Submit</b> 후에는 수정 불가합니다.</div><div class="action-btns"><button class="btn-draft" onclick="draftEval('${candId}')">💾 임시저장 · Save Draft</button><button class="btn-final" onclick="confirmSubmit('${candId}')">✅ 최종 제출 · Final Submit</button></div>${ev.drafted?`<div style="margin-top:10px;font-size:11px;color:var(--text3);padding:8px 12px;background:var(--surface2);border-radius:3px">💾 임시저장: ${ev.draftedAt?new Date(ev.draftedAt).toLocaleString('ko'):''}</div>`:''}</div>`;
+    :isSelfMode
+      /* self 모드: 임시저장 버튼만 */
+      ?`<div class="action-box"><div class="action-box-title">평가 저장 · Save Evaluation</div><div class="action-box-desc">점수 입력 시 기기에 <b>자동저장</b>됩니다. Auto-saved locally on input.<br><b>임시저장</b>으로 저장 후, 좌측 하단 <b>전체 최종 제출</b> 버튼으로 한번에 제출하세요.<br><span style="font-size:11px">After saving drafts, use the <b>Final Submit All</b> button on the bottom-left to submit.</span></div><div class="action-btns"><button class="btn-draft" onclick="draftEval('${candId}')">💾 임시저장 · Save Draft</button></div>${ev.drafted?`<div style="margin-top:10px;font-size:11px;color:var(--text3);padding:8px 12px;background:var(--surface2);border-radius:3px">💾 임시저장: ${ev.draftedAt?new Date(ev.draftedAt).toLocaleString('ko'):''}</div>`:''}</div>`
+      /* 직책자/동료 모드: 기존 방식 유지 */
+      :`<div class="action-box"><div class="action-box-title">평가 저장 · Save Evaluation</div><div class="action-box-desc">점수 입력 시 기기에 <b>자동저장</b>됩니다. Auto-saved locally on input.<br><b>임시저장 / Save Draft</b>: Sheets에 임시 저장합니다.<br><b>최종 제출 / Final Submit</b> 후에는 수정 불가합니다.</div><div class="action-btns"><button class="btn-draft" onclick="draftEval('${candId}')">💾 임시저장 · Save Draft</button><button class="btn-final" onclick="confirmSubmit('${candId}')">✅ 최종 제출 · Final Submit</button></div>${ev.drafted?`<div style="margin-top:10px;font-size:11px;color:var(--text3);padding:8px 12px;background:var(--surface2);border-radius:3px">💾 임시저장: ${ev.draftedAt?new Date(ev.draftedAt).toLocaleString('ko'):''}</div>`:''}</div>`;
 
   document.getElementById('main-body').innerHTML=`
     ${isSelf?`<div class="self-done-notice"><div style="font-size:13px;font-weight:800;color:var(--dw-orange);margin-bottom:4px">🙋 본인평가 · Self Evaluation</div><div style="font-size:12px;color:var(--text2);line-height:1.7">본인 스스로에 대해 솔직하게 평가해 주세요. 본인평가 제출 후 좌측 목록에서 동료평가를 진행합니다.<br><span style="font-size:11px;color:var(--text3)">Please evaluate yourself honestly. After submitting, proceed to peer evaluations.</span></div></div>`:''}
@@ -658,11 +666,6 @@ function renderEvalForm(candId){
     <div class="notice-box">📌 <b>평가 안내</b> · Evaluation Guide<br>• 평가척도: <b>매우그렇다(5) / 그렇다(4) / 보통이다(3) / 아니다(2) / 매우아니다(1) / 잘모르겠다</b><br>&nbsp;&nbsp;Scale: Strongly Agree / Agree / Neutral / Disagree / Strongly Disagree / Not Sure<br>• 잘 모르는 항목은 <b>"잘 모르겠다"</b>를 선택해 주세요 · Select <b>"Not Sure"</b> for items you cannot assess.<br>• <b>최종 제출 후 수정 불가</b>합니다 · Cannot be edited after final submission.</div>
     <div class="section-hd"><span class="section-tag">객관식 평가 · Objective Questions (Q1~Q6)</span><span class="section-line"></span></div>
     <div class="q-cards">${qHTML}</div>
-    <div class="pos-banner">
-      <div class="pos-item"><div class="pv pv-green">${posR!==null?posR+'%':'-'}</div><div class="pl">긍정률 <small>Positive Rate</small></div></div>
-      <div class="pos-item pos-div"><div class="pv pv-red">${negR!==null?negR+'%':'-'}</div><div class="pl">부정률 <small>Negative Rate</small></div></div>
-      <div class="pos-item pos-div"><div class="pv pv-gray">${answered}<span style="font-size:18px"> / ${QUESTIONS.length}</span></div><div class="pl">응답 수 <small>Answered</small></div></div>
-    </div>
     <div class="section-hd"><span class="section-tag">주관식 · Open-Ended (Q7~Q8)</span><span class="section-line"></span></div>
     <div class="text-cards">
       <div class="text-card"><div class="text-card-label lbl-strength">Q7 · 장점 / Strengths</div><div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.6">평가 대상자의 장점에 대해 지속 발전시킬 내용을 피드백해 주세요.<br><span style="font-style:italic">Feedback on strengths to further develop.</span></div><textarea class="eval-textarea" id="ta-strength" placeholder="장점 피드백..." ${submitted?'disabled':''}>${ev.strength||''}</textarea></div>
@@ -753,11 +756,16 @@ async function submitEval(candId){
 
 async function pushToSheets(candId,ev,isFinal){
   const isSelf=candId==='__self__';
+  const isInternPeer=(currentMode==='self'&&!isSelf); // 인턴이 동료 평가하는 경우
   const cand=isSelf?{id:currentUser.id,name:currentUser.name,dept1:'',dept2:''}:CANDIDATES.find(c=>String(c.id)===String(candId))||{id:candId,name:candId,dept1:'',dept2:''};
-  const typeMap={self:'본인평가',manager:'직책자평가',peer:'동료평가'};
+  let evalType;
+  if(isSelf) evalType='본인평가';
+  else if(isInternPeer) evalType='인턴동료평가';
+  else if(currentMode==='manager') evalType='직책자평가';
+  else evalType='동료평가';
   await gasPost({
     action:'save360',
-    evalType:isSelf?'본인평가':typeMap[currentMode]||currentMode,
+    evalType,
     evaluator_id:currentUser.id,evaluator_name:currentUser.name,evaluator_dept:currentUser.dept||'',
     cand_id:cand.id,cand_name:cand.name,cand_dept1:cand.dept1||'',cand_dept2:cand.dept2||'',
     scores:QUESTIONS.map(q=>ev.scores[q.key]||''),
@@ -768,14 +776,67 @@ async function pushToSheets(candId,ev,isFinal){
 }
 
 /* ════════════════════════════════════════
-   VIEWER
+   전체 최종 제출 (self 모드 전용)
 ════════════════════════════════════════ */
+async function confirmFinalSubmitAll(){
+  // 본인평가 + 동료평가 모두 확인
+  const selfEv=evalData[getKey(currentUser.id,'__self__')];
+  const peerEvs=filteredCands.map(c=>({cand:c,ev:evalData[getKey(currentUser.id,c.id)]}));
+
+  const selfDone=selfEv?.finalSubmitted;
+  const peerDoneCount=peerEvs.filter(x=>x.ev?.finalSubmitted).length;
+  const selfDrafted=selfEv?.drafted&&!selfDone;
+  const peerDraftedList=peerEvs.filter(x=>x.ev?.drafted&&!x.ev?.finalSubmitted);
+
+  // 제출 가능한 항목 목록
+  const toSubmit=[];
+  if(selfDrafted) toSubmit.push('본인평가 (나 자신)');
+  peerDraftedList.forEach(x=>toSubmit.push(`동료평가: ${x.cand.name}`));
+
+  if(!toSubmit.length&&selfDone&&peerDoneCount===filteredCands.length){
+    showToast('모든 평가가 이미 최종 제출되었습니다 / All evaluations already submitted');return;
+  }
+  if(!toSubmit.length){
+    showToast('임시저장된 평가가 없습니다. 먼저 임시저장 해주세요 / No drafts to submit');return;
+  }
+
+  const msg=`전체 최종 제출하시겠습니까?\nAre you sure you want to submit all finally?\n\n제출 대상 (${toSubmit.length}건):\n${toSubmit.join('\n')}\n\n⚠ 최종 제출 후에는 수정할 수 없습니다.\n⚠ Once submitted, it cannot be modified.`;
+  if(!confirm(msg))return;
+
+  showBanner('⏳ 전체 최종 제출 중...');
+  // 본인평가 제출
+  if(selfDrafted){
+    localSave();
+    selfEv.finalSubmitted=true;selfEv.submitted=true;selfEv.submittedAt=new Date().toISOString();
+    saveLS();
+    await pushToSheets('__self__',selfEv,true);
+  }
+  // 동료평가 제출
+  for(const {cand,ev} of peerDraftedList){
+    ev.finalSubmitted=true;ev.submitted=true;ev.submittedAt=new Date().toISOString();
+    saveLS();
+    await pushToSheets(cand.id,ev,true);
+  }
+  renderCandList();
+  if(selectedCandId) renderEvalForm(selectedCandId);
+  showBanner('✅ 전체 최종 제출 완료','var(--green)',3000);
+  showToast(`✅ ${toSubmit.length}건 최종 제출 완료 · All submitted`);
+}
+
+
 function vTab(tab){
   currentViewerTab=tab;
-  document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',['list','self','other','compare'][i]===tab));
-  if(tab==='list')renderViewerList();
-  else if(selectedViewerCand)renderReport(selectedViewerCand,tab);
+  document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',['list','report'][i]===tab));
+  if(tab==='list') renderViewerList();
+  else if(tab==='report'&&selectedViewerCand) renderReport(selectedViewerCand);
   else renderViewerList();
+}
+
+async function openReport(candId){
+  selectedViewerCand=candId;
+  document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',i===1));
+  currentViewerTab='report';
+  renderReport(candId);
 }
 
 async function renderViewerList(){
@@ -795,14 +856,7 @@ async function renderViewerList(){
   }catch(e){document.getElementById('viewer-body').innerHTML='<div class="empty-state"><div class="empty-icon">⚠</div><div>데이터 로드 실패 / Load failed</div></div>';}
 }
 
-async function openReport(candId){
-  selectedViewerCand=candId;
-  document.querySelectorAll('.vtab').forEach((b,i)=>b.classList.toggle('active',i===1));
-  currentViewerTab='self';
-  renderReport(candId,'self');
-}
-
-async function renderReport(candId,tab){
+async function renderReport(candId){
   document.getElementById('viewer-body').innerHTML='<div class="empty-state"><div class="empty-icon">🔄</div><div>결과 로드 중...</div></div>';
   const cand=CANDIDATES.find(c=>String(c.id)===String(candId));
   let selfData=[],otherData=[];
